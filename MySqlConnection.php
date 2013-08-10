@@ -2,28 +2,21 @@
 
 namespace DB;
 
-require 'MySqlConnectionException.php';
+require_once 'Connection.php';
 
-class MySqlConnection
+class MySqlConnection extends Connection
 {
 
-    private $user;
+    protected function __construct() 
+    {
+        parent::__construct(ConnectionProperties::MYSQLDRV);
+    }
 
-    private $passwd;
-
-    private $db;
-
-    private $host = 'localhost';
-
-    private $port = '3306';
-
-    private static $instance = null;
-
-    private $conn = null;
-
-    private $result = null;
-
-    private function __construct() {
+    protected function init() {;}    
+    
+    
+    /*private function __construct() {
+    
         $initFile = dirname(__FILE__) . '/../connector.ini';
         if (defined('CONNECTOR_INIT_FILE')) {
             $initFile = CONNECTOR_INIT_FILE;
@@ -116,5 +109,5 @@ class MySqlConnection
         $item = mysql_fetch_object($this->result);
         @mysql_free_result($this->result);
         return $item;
-    }
+    }*/
 }

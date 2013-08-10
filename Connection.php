@@ -2,8 +2,8 @@
 
 namespace DB;
 
-require 'ConnectionException.php';
-require 'ConnectionProperties.php';
+require_once 'ConnectionException.php';
+require_once 'ConnectionProperties.php';
 
 abstract class Connection
 {
@@ -16,16 +16,39 @@ abstract class Connection
 
     protected $sth = null;
 
-    protected static $instance = null;
+    protected static $instances = [];
 
-    protected function __construct($driver)
+    protected function __construct($driver, $connectionName = null)
     {
-        $this->properties = ConnectionProperties::get($driver);
+        $this->properties = ConnectionProperties::get($driver, $connectionName);
+        
+        if (empty($this->properties)) {
+			throw new ConnectionException('No Connection properties are defined' . !empty($connectionName) ? ": for $connectioName" : '');
+		}
+        
         $this->init();
         $this->connect();
     }
+    
+    private function __clone() {;}
 
     protected abstract function init();
+
+    public static function getInstance($connectionName = null)
+    {
+		//var_dump($connectionName);
+        $className = get_called_class();
+        $instanceKey = $className . $connectionName;
+        
+        //var_dump($instanceKey);
+
+        if (!array_key_exists($instanceKey, self::$instances)) {
+            self::$instances[$instanceKey] = new $className($connectionName);
+            //echo $className, "\n";
+        }
+
+        return self::$instances[$instanceKey];
+    }
 
     public function connect()
     {
@@ -47,7 +70,6 @@ abstract class Connection
     {
        try {
             $this->sth = $this->dbh->prepare($query);
-            //$this->sth->setFetchMode(\PDO::FETCH_CLASS);
             $this->sth->execute($params);
         } catch (\PDOException $e) {
             throw new ConnectionException($e->getMessage(), $e->getCode(), $e);
@@ -55,5 +77,21 @@ abstract class Connection
 
         return $this;
     }
+    
+    public function getAffectedRows() 
+    {
+		return $this->sth->countRow();
+	}
+    
+    public function fetchAll($className = 'stdClass', $ctorArgs = array())
+    {
+        return $this->sth->fetchAll($className, $ctorArgs);
+    }
+
+    public function fetchOne($className = 'stdClass', $ctorArgs = array())
+    {
+        return $this->sth->fetchObject();
+    }
+
 
 }

@@ -2,19 +2,20 @@
 
 namespace DB;
 
-require 'Connection.php';
+require_once 'Connection.php';
+require_once 'FileSystemException.php';
+
+use FileSystem\FileSystemException;
 
 class SqliteConnection extends Connection
 {
 
     private $dbFile = '';
 
-    protected function __construct()
+    protected function __construct($connectionName = null)
     {
-        parent::__construct(ConnectionProperties::SQLITEDRV);
+        parent::__construct(ConnectionProperties::SQLITEDRV, $connectionName);
     }
-
-    private function __clone() {}
 
     protected function init()
     {
@@ -26,46 +27,33 @@ class SqliteConnection extends Connection
 
         if (':memory:' !== $this->dbFile) {
             if (!file_exists($this->dbFile)) {
-                $this->createDBFile();
+                if (array_key_exists('create_dbfile', $this->properties) 
+					&& $this->properties['create_dbfile']) {
+					$this->createDbFile();
+				} else {
+					throw new FileSystemException($this->dbFile . ' does not exists!');
+				}
             } else if (!is_writable($this->dbFile)) {
-                throw new ConnectionException($this->dbFile . ' is not writeable!');
-            }
+                throw new FileSystemException($this->dbFile . ' is not writeable!');
+            } 
         }
 
         $this->dsn = 'sqlite:' . $this->dbFile;
     }
 
-	public function createDBFile()
+	public function createDbFile()
 	{
+		$dir = dirname($this->dbFile);
+        
+        if (!is_writable($dir)) {
+			throw new FileSystemException('Could not create ' . 
+				$this->dbFile . 
+				', ' . 
+				$dir . 
+				' must be writable');
+		}
+        
         touch($this->dbFile);
     }
 
-    
-
-    public static function getInstance()
-    {
-        print_r(get_called_class());
-        
-        /*if (null === self::$instance) {
-            self::$instance = new get_called_class();
-        }
-        return self::$instance;*/
-    }
-    
-    public function fetchAll()
-    {
-        return $this->sth->fetchAll();
-    }
-
-    public function fetchOne()
-    {
-        return $this->sth->fetchObject();
-    }
-
-    public function dropTable($tableName)
-    {
-        $this->query("DROP TABLE IF EXISTS $tableName");
-    }
-
 }
-
